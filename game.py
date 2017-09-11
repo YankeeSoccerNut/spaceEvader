@@ -25,6 +25,8 @@ pygame_screen = pygame.display.set_mode(screen_size)
 pygame.display.set_caption("Space eVader")
 background_image = pygame.image.load("./images/spaceScene.png")
 
+font = pygame.font.Font(None, 25)
+
 # our Hero!
 hero_image_right = pygame.image.load("./images/yoda.png")
 hero_image_left = pygame.image.load("./images/yodaleft.png")
@@ -134,6 +136,12 @@ def randomlyPlaceChar(character):
     character['y'] = random.randint(32,screen_size_y - 32)
     return (character['x'], character['y'])
 
+def removeObjectFromBackground(object):
+        pygame_screen.blit(background_image, (object['x'], object['y']), pygame.Rect(object['x'], object['y'], object['height'], object['width']))
+        object['x'] = screen_size_x + 100
+        object['y'] = screen_size_y + 100
+        return (object['x'],object['y'])
+
 def detectCollision(character1, character2):
     distance_between = fabs(character1['x'] - character2['x']) + fabs(character1['y'] - character2['y'])
 
@@ -219,26 +227,53 @@ def moveLordVader(character, pursue=True):
 game_on = True
 advantageLight = True
 vaderPursues = True
+advantageTimer = 10
+advantageStartTicks = pygame.time.get_ticks()
+powerTimer = 5
+powerStartTicks = 0
+powerUp = False
+
 randomlyPlaceChar(lightsaber)
-timer = 10
-start_ticks = pygame.time.get_ticks()
 
 while game_on:     #main loop
-    seconds = (pygame.time.get_ticks()-start_ticks)/1000
+    pygame_screen.blit(background_image, [0,0])
+
+    seconds = (pygame.time.get_ticks()-advantageStartTicks)/1000
 
     if seconds >= 1: # updates the timer each second
-        timer -= 1
+        advantageTimer -= 1
         seconds = 0
-        start_ticks = pygame.time.get_ticks()
+        advantageStartTicks = pygame.time.get_ticks()
 
-    if timer <=0:
-        if advantageLight:
+    if advantageTimer <=0:  #advantage has shifted
+        if advantageLight:  # now it's Darkside Advantage
             advantageLight = False
-            timer = 5
+            advantageTimer = 5
             vaderPursues = True
-        else:
+        else:  # time for Lightside to have the advantage
             advantageLight = True
-            timer = 10
+            advantageTimer = 10
+            randomlyPlaceChar(lightsaber)
+    # Manage the Power Timer in main loop (collision is 1 point in time)
+
+    if powerUp:  #we know hero has lightsaber
+        powerSeconds = (pygame.time.get_ticks()-powerStartTicks)/1000
+        print "powerSeconds %r" % powerSeconds
+        print "powerTimer %r" % powerTimer
+
+        if powerSeconds >= 1: # updates the timer each second
+            print "powerTimer %d" % powerTimer
+            powerTimer -= 1
+            powerSeconds = 0
+            powerStartTicks = pygame.time.get_ticks()
+
+        if powerTimer <=0:    #time expired, set flag and reset timer
+            print "powerUp expired!!"
+            powerUp = False
+            powerTimer = 5
+            hero_image = hero_image_left
+            if advantageLight: #another chance to grab the lightsaber
+                randomlyPlaceChar(lightsaber)
 
     for event in pygame.event.get():
         if (event.type == pygame.QUIT):  # Trap the quit event
@@ -284,45 +319,62 @@ while game_on:     #main loop
 
     keepCharInBounds(hero)
 
+    #overide the image during powerUp
+    if powerUp:
+        hero_image = lightsaberNormal
+
     # look for collision with lightsaber
-    # Should I consider advantageLight?
 
     if (detectCollision(hero, lightsaber)):
-        print "Hero has the lightsaber!"
-        # Remove the lightsaber
-        # Change our hero image
+        print "Hero has the lightsaber!!!"
+        powerUp = True
+
+        #wipe out the lightsaber
+        removeObjectFromBackground(lightsaber)
+
         # Make Vader run away!
         vaderPursues = False
 
-    if (detectCollision(lordVader, hero)):
-        if vaderPursues and not advantageLight:
-            print "Vader caught our Hero during Darkside!!"
-        elif (vaderPursues and advantageLight):
-            print "Vader caught our Hero during Lighside!!"
-        elif(advantageLight and not vaderPursues):
-            print "Hero caught Vader trying to evade"
-        else:  # Vader Evading During Darkside advantage
-            print "Vader evading during Darkside advantage?"
+        #get the baseline for the timer
+        powerStartTicks = pygame.time.get_ticks()
 
-    # Fill in the screen with a color or image...use blit
-    pygame_screen.blit(background_image, [0,0])
-    font = pygame.font.Font(None, 25)
+    if (detectCollision(lordVader, hero)):
+        print "powerUp is %r" % powerUp
+        if powerUp:  # Win!
+            "print our hero wins!"
+            hero['wins'] += 1
+            randomlyPlaceChar(hero)
+            randomlyPlaceChar(lordVader)
+        else:
+            if advantageLight:
+                print "Vader caught you while you had the advantage"
+            else:
+                print "Dark forces are at play!"
 
     if advantageLight:
-        advantage_text = font.render("Lightside Rules: %d" % timer, True, (255,255,255))
+        advantage_text = font.render("Lightside Rules: %d" % advantageTimer, True, (255,255,255))
 
-        # blinking lightsaber
-        if lightsaber_image == lightsaberInvert:
-            lightsaber_image = lightsaberNormal
-        else:
-            lightsaber_image = lightsaberInvert
+        if powerUp:
+            print "hero image should be different"
+        else:  # blinking lightsaber
+            if lightsaber_image == lightsaberInvert:
+                lightsaber_image = lightsaberNormal
+            else:
+                lightsaber_image = lightsaberInvert
 
-        pygame_screen.blit(lightsaber_image, [lightsaber['x'], lightsaber['y']])
+            pygame_screen.blit(lightsaber_image, [lightsaber['x'], lightsaber['y']])
 
     else: # advantage Darkside!  No lightsaber to save our hero!
-        advantage_text = font.render("DARKSIDE RULES! %d" % timer, True, (255,255,255))
+        advantage_text = font.render("DARKSIDE RULES! %d" % advantageTimer, True, (255,255,255))
+
+        #if the hero was powerUp the Darkside takes it away!
+        powerTimer = 5 #reset timer
+        powerUp = False
+
         #wipe out the lightsaber
-        pygame_screen.blit(background_image, (lightsaber['x'], lightsaber['y']), pygame.Rect(lightsaber['x'], lightsaber['y'], 32, 32))
+        removeObjectFromBackground(lightsaber)
+
+    # Fill in the screen with a color or image...use blit
 
     wins_text = font.render("Wins: %d" % (hero['wins']), True, (255,255,255))
     pygame_screen.blit(wins_text, [40,40])
@@ -330,7 +382,6 @@ while game_on:     #main loop
     pygame_screen.blit(lordVader_image, [lordVader['x'], lordVader['y']])
 
     # Always want the hero on top so blit him last!
-
     pygame_screen.blit(hero_image, [hero['x'], hero['y']])
 
 # Repeat over and over until quit

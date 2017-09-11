@@ -235,6 +235,10 @@ powerUp = False
 
 randomlyPlaceChar(lightsaber)
 
+# start the music...
+pygame.mixer.music.load("./sounds/swmain.mp3")
+pygame.mixer.music.play(-1)
+
 while game_on:     #main loop
     pygame_screen.blit(background_image, [0,0])
 

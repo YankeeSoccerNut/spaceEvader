@@ -1,3 +1,8 @@
+# TODO: Need stronger visual/audio cue when powerUp is over...r2d2 is weak
+# TODO: Could play with volume so that Sound Effects trump Background music
+# TODO: Game play -- what's the goal?  Good v Evil...1st to 10 wins?  Shortest time to 10 wins for our hero?
+# TODO: Retro effects -- could have Coins and Start, could add Top Players list
+
 #  Include pygame
 import pygame
 import random
@@ -5,12 +10,16 @@ import random
 # from the python built-in get the absolute value method
 # we'll use this in our collision detection
 from math import fabs
-from math import sqrt
-from math import pow
+
+# don't need these math funcions unless I want to implement Distance
+# from math import sqrt
+# from math import pow
 
 # Init pygame
 # we have to run their init method
+
 pygame.init()
+# print pygame.mixer.get_num_channels() - Default is 8, confirmed!
 
 # Create a screen with a particular size
 # Use a tuple (an immutable list) for screen size...pygame requires it
@@ -41,11 +50,23 @@ lightsaberNormal = pygame.image.load("./images/lightsaber.png")
 lightsaberInvert = pygame.image.load("./images/invertLightsaber.png")
 lightsaber_image = lightsaberNormal
 
-#sounds
+#got some sound channel conflicts....group and play sounds through assigned channels
+#channel objects
+# pygame.mixer.set_reserved(3)
+mixChannel1 = pygame.mixer.Channel(0)
+mixChannel2 = pygame.mixer.Channel(1)
+mixChannel3 = pygame.mixer.Channel(2)
+
+#e.g. Lord Vader and Yoda never speak at same time...so they're in same group
+#sounds groups
 vaderWarningSound = pygame.mixer.Sound(file="./sounds/swvader01.wav")
 yodaLaughingSound = pygame.mixer.Sound(file="./sounds/yodalaughing.wav")
+
 saberOnSound = pygame.mixer.Sound(file="./sounds/ltsaberon01.wav")
-saberOffSound = pygame.mixer.Sound(file="./sounds/ltsaberoff01.wav")
+r2d2WarnSound = pygame.mixer.Sound(file="./sounds/R2D2Warn.wav")
+
+saberHitSound = pygame.mixer.Sound(file="./sounds/ltsaberhit01.wav")
+saberAppearsSound = pygame.mixer.Sound(file="./sounds/ltsaberappears.wav")
 
 hero = {
     "x": 100,
@@ -261,34 +282,15 @@ while game_on:     #main loop
             advantageLight = False
             advantageTimer = 5
             vaderPursues = True
-            vaderWarningSound.play()
+            mixChannel1.play(vaderWarningSound)
         else:  # time for Lightside to have the advantage
+            mixChannel1.play(yodaLaughingSound)
             advantageLight = True
             advantageTimer = 10
             randomlyPlaceChar(lightsaber)
-            yodaLaughingSound.play()
+            mixChannel3.play(saberAppearsSound)
 
     # Manage the Power Timer in main loop (collision is 1 point in time)
-
-    if powerUp:  #we know hero has lightsaber
-        powerSeconds = (pygame.time.get_ticks()-powerStartTicks)/1000
-        print "powerSeconds %r" % powerSeconds
-        print "powerTimer %r" % powerTimer
-
-        if powerSeconds >= 1: # updates the timer each second
-            print "powerTimer %d" % powerTimer
-            powerTimer -= 1
-            powerSeconds = 0
-            powerStartTicks = pygame.time.get_ticks()
-
-        if powerTimer <=0:    #time expired, set flag and reset timer
-            print "powerUp expired!!"
-            powerUp = False
-            powerTimer = 5
-            hero_image = hero_image_left
-            saberOffSound.play()
-            if advantageLight: #another chance to grab the lightsaber
-                randomlyPlaceChar(lightsaber)
 
     for event in pygame.event.get():
         if (event.type == pygame.QUIT):  # Trap the quit event
@@ -336,19 +338,14 @@ while game_on:     #main loop
 
     keepCharInBounds(hero)
 
-    #overide the image during powerUp
-    if powerUp:
-        hero_image = lightsaberNormal
-
     # look for collision with lightsaber
 
     if (detectCollision(hero, lightsaber)):
-        print "Hero has the lightsaber!!!"
         powerUp = True
 
         #wipe out the lightsaber and make sound
         removeObjectFromBackground(lightsaber)
-        saberOnSound.play()
+        mixChannel2.play(saberOnSound)
 
         # Make Vader run away!
         vaderPursues = False
@@ -357,9 +354,9 @@ while game_on:     #main loop
         powerStartTicks = pygame.time.get_ticks()
 
     if (detectCollision(lordVader, hero)):
-        print "powerUp is %r" % powerUp
         if powerUp:  # Win!
-            "print our hero wins!"
+            #"print our hero wins!"
+            mixChannel3.play(saberHitSound)
             hero['wins'] += 1
             randomlyPlaceChar(hero)
             randomlyPlaceChar(lordVader)
@@ -369,13 +366,30 @@ while game_on:     #main loop
             else:
                 print "Dark forces are at play!"
 
+    if powerUp:  #we know hero has lightsaber
+        hero_image = lightsaberNormal #override the hero image
+
+        powerSeconds = (pygame.time.get_ticks()-powerStartTicks)/1000
+
+        if powerSeconds >= 1: # updates the timer each second
+            powerTimer -= 1
+            powerSeconds = 0
+            powerStartTicks = pygame.time.get_ticks()
+
+        if powerTimer <=0:    #time expired, set flag and reset timer
+            powerUp = False
+            powerTimer = 5
+            hero_image = hero_image_left
+            print "reset hero_image after powerUp expired"
+            mixChannel2.play(r2d2WarnSound)
+            if advantageLight: #another chance to grab the lightsaber
+                randomlyPlaceChar(lightsaber)
+                mixChannel3.play(saberAppearsSound)
+
     if advantageLight:
         advantage_text = font.render("Lightside Rules: %d" % advantageTimer, True, (255,255,255))
 
-        if powerUp:
-            print "hero image should be different"
-        else:  # blinking lightsaber
-
+        if not powerUp: #make lightsaber blink
             if lightsaber_image == lightsaberInvert:
                 lightsaber_image = lightsaberNormal
             else:
@@ -388,6 +402,9 @@ while game_on:     #main loop
         #if the hero was powerUp the Darkside takes it away!
         powerTimer = 5 #reset timer
         powerUp = False
+
+        if hero_image == lightsaberNormal:  #kluge to squash hero_image bug
+            hero_image = hero_image_left
 
         #wipe out the lightsaber
         removeObjectFromBackground(lightsaber)

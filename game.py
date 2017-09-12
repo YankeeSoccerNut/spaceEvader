@@ -41,6 +41,12 @@ lightsaberNormal = pygame.image.load("./images/lightsaber.png")
 lightsaberInvert = pygame.image.load("./images/invertLightsaber.png")
 lightsaber_image = lightsaberNormal
 
+#sounds
+vaderWarningSound = pygame.mixer.Sound(file="./sounds/swvader01.wav")
+yodaLaughingSound = pygame.mixer.Sound(file="./sounds/yodalaughing.wav")
+saberOnSound = pygame.mixer.Sound(file="./sounds/ltsaberon01.wav")
+saberOffSound = pygame.mixer.Sound(file="./sounds/ltsaberoff01.wav")
+
 hero = {
     "x": 100,
     "y": 100,
@@ -115,7 +121,7 @@ def keepCharInBounds(character):
     if character['x'] < 0:
         character['x'] = 0
     elif character['x'] + 32 >= screen_size_x:
-        character['x'] = screen_size_x - 32   #keep our hero on the screen
+        character['x'] = screen_size_x - 32
 
 #let's implement goal-oriented movement...
 #Trying to keep it abstracted...
@@ -248,16 +254,20 @@ while game_on:     #main loop
         advantageTimer -= 1
         seconds = 0
         advantageStartTicks = pygame.time.get_ticks()
+        moveLordVader( hero, not powerUp) #evades if powerUp
 
     if advantageTimer <=0:  #advantage has shifted
         if advantageLight:  # now it's Darkside Advantage
             advantageLight = False
             advantageTimer = 5
             vaderPursues = True
+            vaderWarningSound.play()
         else:  # time for Lightside to have the advantage
             advantageLight = True
             advantageTimer = 10
             randomlyPlaceChar(lightsaber)
+            yodaLaughingSound.play()
+
     # Manage the Power Timer in main loop (collision is 1 point in time)
 
     if powerUp:  #we know hero has lightsaber
@@ -276,6 +286,7 @@ while game_on:     #main loop
             powerUp = False
             powerTimer = 5
             hero_image = hero_image_left
+            saberOffSound.play()
             if advantageLight: #another chance to grab the lightsaber
                 randomlyPlaceChar(lightsaber)
 
@@ -310,8 +321,10 @@ while game_on:     #main loop
             moveLordVader(hero, vaderPursues) #pursue/evade our hero
 
     if keys_down['up']:
+        hero_image = hero_image_left
         hero['y'] -= hero['speed']
     elif keys_down['down']:
+        hero_image = hero_image_left
         hero['y'] += hero['speed']
 
     if keys_down['left']:
@@ -333,8 +346,9 @@ while game_on:     #main loop
         print "Hero has the lightsaber!!!"
         powerUp = True
 
-        #wipe out the lightsaber
+        #wipe out the lightsaber and make sound
         removeObjectFromBackground(lightsaber)
+        saberOnSound.play()
 
         # Make Vader run away!
         vaderPursues = False
@@ -361,11 +375,11 @@ while game_on:     #main loop
         if powerUp:
             print "hero image should be different"
         else:  # blinking lightsaber
+
             if lightsaber_image == lightsaberInvert:
                 lightsaber_image = lightsaberNormal
             else:
                 lightsaber_image = lightsaberInvert
-
             pygame_screen.blit(lightsaber_image, [lightsaber['x'], lightsaber['y']])
 
     else: # advantage Darkside!  No lightsaber to save our hero!

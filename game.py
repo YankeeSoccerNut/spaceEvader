@@ -2,6 +2,8 @@
 # TODO: Could play with volume so that Sound Effects trump Background music
 # TODO: Game play -- what's the goal?  Good v Evil...1st to 10 wins?  Shortest time to 10 wins for our hero?
 # TODO: Retro effects -- could have Coins and Start, could add Top Players list
+# TODO: improve the KeepInBounds....use up/down/left/right technique...won't work for Vader through....
+# TODO: Look at hypot technique as well...variation on pointMe
 
 #  Include pygame
 import pygame
@@ -27,7 +29,7 @@ screen_size_x = 512
 screen_size_y = 480
 # screen_size_x = 600
 # screen_size_y = 800
-screen_size = (screen_size_x,screen_size_y)
+screen_size = (screen_size_x, screen_size_y)
 # Tell pygame to set the screen up and store it
 pygame_screen = pygame.display.set_mode(screen_size)
 
@@ -50,15 +52,15 @@ lightsaberNormal = pygame.image.load("./images/lightsaber.png")
 lightsaberInvert = pygame.image.load("./images/invertLightsaber.png")
 lightsaber_image = lightsaberNormal
 
-#got some sound channel conflicts....group and play sounds through assigned channels
-#channel objects
+# got some sound channel conflicts....group and play sounds through assigned channels
+# channel objects
 # pygame.mixer.set_reserved(3)
 mixChannel1 = pygame.mixer.Channel(0)
 mixChannel2 = pygame.mixer.Channel(1)
 mixChannel3 = pygame.mixer.Channel(2)
 
-#e.g. Lord Vader and Yoda never speak at same time...so they're in same group
-#sounds groups
+# e.g. Lord Vader and Yoda never speak at same time...so they're in same group
+# sounds groups
 vaderWarningSound = pygame.mixer.Sound(file="./sounds/swvader01.wav")
 yodaLaughingSound = pygame.mixer.Sound(file="./sounds/yodalaughing.wav")
 
@@ -73,24 +75,24 @@ hero = {
     "y": 100,
     "speed": 15,
     "wins": 0,
-    "height":32,
-    "width":32
+    "height": 32,
+    "width": 32
 }
 
 lightsaber = {
     "x": 200,
     "y": 200,
     "speed": 10,
-    "height":32,
-    "width":32
+    "height": 32,
+    "width": 32
 }
 
 lordVader = {
     "x": 300,
     "y": 300,
     "speed": 15,
-    "height":50,
-    "width":38
+    "height": 50,
+    "width": 38
 }
 
 topLeftCorner = {
@@ -114,12 +116,12 @@ bottomRightCorner = {
 }
 
 keys = {
-    "esc":27,
-    "space":32,
-    "i":105,
-    "j":106,
-    "k":107,
-    "l":108,
+    "esc": 27,
+    "space": 32,
+    "i": 105,
+    "j": 106,
+    "k": 107,
+    "l": 108,
     "up": 273,
     "down": 274,
     "right": 275,
@@ -133,56 +135,65 @@ keys_down = {
     "left": False
 }
 
+
 def keepCharInBounds(character):
     if character['y'] < 0:
-            character['y'] = 0
+        character['y'] = 0
     elif character['y'] + 32 >= screen_size_y:
-            character['y'] = screen_size_y - 32
+        character['y'] = screen_size_y - 32
 
     if character['x'] < 0:
         character['x'] = 0
     elif character['x'] + 32 >= screen_size_x:
         character['x'] = screen_size_x - 32
 
-#let's implement goal-oriented movement...
-#Trying to keep it abstracted...
-#Give your x,y position and goal x,y position  get delta x and delta y from your position (to calculate slope of direct line to goal)
+# let's implement goal-oriented movement...
+# Trying to keep it abstracted...
+# Give your x,y position and goal x,y position  get delta x and delta y from your position (to calculate slope of direct line to goal)
 
-def pointMe (yourPosition, goalPosition):
+
+def pointMe(yourPosition, goalPosition):
     # print yourPosition
     # print goalPosition
-    delta = [0,0]
+    delta = [0, 0]
     delta[0] = yourPosition[0] - goalPosition[0]
     delta[1] = yourPosition[1] - goalPosition[1]
     # lineDistance = sqrt((pow(delta[0],2)) + (pow(delta[1],2)))
     # print lineDistance
     return delta
 
+
 def randomlyPlaceChar(character):
-    character['x'] = random.randint(32,screen_size_x - 32)
-    character['y'] = random.randint(32,screen_size_y - 32)
+    character['x'] = random.randint(32, screen_size_x - 32)
+    character['y'] = random.randint(32, screen_size_y - 32)
     return (character['x'], character['y'])
 
+
 def removeObjectFromBackground(object):
-        pygame_screen.blit(background_image, (object['x'], object['y']), pygame.Rect(object['x'], object['y'], object['height'], object['width']))
-        object['x'] = screen_size_x + 100
-        object['y'] = screen_size_y + 100
-        return (object['x'],object['y'])
+    pygame_screen.blit(background_image, (object['x'], object['y']), pygame.Rect(
+        object['x'], object['y'], object['height'], object['width']))
+    object['x'] = screen_size_x + 100
+    object['y'] = screen_size_y + 100
+    return (object['x'], object['y'])
+
 
 def detectCollision(character1, character2):
-    distance_between = fabs(character1['x'] - character2['x']) + fabs(character1['y'] - character2['y'])
+    distance_between = fabs(
+        character1['x'] - character2['x']) + fabs(character1['y'] - character2['y'])
 
     if distance_between < 32:
         return True
 
     return (False)
 
+
 def moveLordVader(character, pursue=True):
     # Move Vader either towards or away from character depending on bool
     # default is to pursue, when pursue is false we evade
 
     # Use pointMe to get the deltas for calculating slope
-    target = pointMe([lordVader['x'],lordVader['y']], [character['x'],character['y']])
+    target = pointMe([lordVader['x'], lordVader['y']],
+                     [character['x'], character['y']])
 
     # TODO Ask why I have to do global here but NOT above
     global lordVader_image
@@ -197,9 +208,9 @@ def moveLordVader(character, pursue=True):
             lordVader['x'] -= lordVader['speed']
         else:
             # print "Collision Along X"
-            #kluge....avoid potential divide by zero error!
+            # kluge....avoid potential divide by zero error!
             target[0] = 1
-    else: # need to evade, reverse everthing above
+    else:  # need to evade, reverse everthing above
         if target[0] < 0:  # delta x
             lordVader_image = lordVaderImageLeft
             lordVader['x'] -= lordVader['speed']
@@ -208,7 +219,7 @@ def moveLordVader(character, pursue=True):
             lordVader['x'] += lordVader['speed']
         else:
             # print "Collision Along X"
-            #kluge....avoid potential divide by zero error!
+            # kluge....avoid potential divide by zero error!
             target[0] = 1
 
     # y coordinate is tougher...speed is a proxy for distance
@@ -222,32 +233,37 @@ def moveLordVader(character, pursue=True):
             else:
                 lordVader['y'] -= lordVader['speed']
         elif target[1] < 0:  # delta y
-            lordVader['y'] += round(fabs(lordVader['speed']*target[1]/target[0]))
+            lordVader['y'] += round(fabs(lordVader['speed']
+                                         * target[1] / target[0]))
         elif target[1] > 0:
-            lordVader['y'] -= round(fabs(lordVader['speed']*target[1]/target[0]))
+            lordVader['y'] -= round(fabs(lordVader['speed']
+                                         * target[1] / target[0]))
         # else:  delta Y is 0
         #     print "Collision Along Y"
-    else: #evade...opposite of above
+    else:  # evade...opposite of above
         if target[0] <= 32:  # already collided along X
             if target[1] <= 0:
                 lordVader['y'] -= lordVader['speed']
             else:
                 lordVader['y'] += lordVader['speed']
         elif target[1] < 0:  # delta y
-            lordVader['y'] -= round(fabs(lordVader['speed']*target[1]/target[0]))
+            lordVader['y'] -= round(fabs(lordVader['speed']
+                                         * target[1] / target[0]))
         elif target[1] > 0:
-            lordVader['y'] += round(fabs(lordVader['speed']*target[1]/target[0]))
+            lordVader['y'] += round(fabs(lordVader['speed']
+                                         * target[1] / target[0]))
         # else:  Delta Y is zero
         #     print "Collision Along Y"
-        #kluge to the 4 corners problem...
+        # kluge to the 4 corners problem...
         if ((detectCollision(lordVader, topLeftCorner)) or
-        (detectCollision(lordVader, topRightCorner)) or
-        (detectCollision(lordVader, bottomLeftCorner)) or
-        (detectCollision(lordVader, bottomRightCorner))):
+            (detectCollision(lordVader, topRightCorner)) or
+            (detectCollision(lordVader, bottomLeftCorner)) or
+                (detectCollision(lordVader, bottomRightCorner))):
             randomlyPlaceChar(lordVader)
 
-    #print "After Y-Speed calc...Lord Vader x: %r y: %r" % (lordVader['x'], lordVader['y'])
+    # print "After Y-Speed calc...Lord Vader x: %r y: %r" % (lordVader['x'], lordVader['y'])
     keepCharInBounds(lordVader)
+
 
 # Create a game loop (while)
 # use a boolean
@@ -266,18 +282,18 @@ randomlyPlaceChar(lightsaber)
 pygame.mixer.music.load("./sounds/swmain.mp3")
 pygame.mixer.music.play(-1)
 
-while game_on:     #main loop
-    pygame_screen.blit(background_image, [0,0])
+while game_on:  # main loop
+    pygame_screen.blit(background_image, [0, 0])
 
-    seconds = (pygame.time.get_ticks()-advantageStartTicks)/1000
+    seconds = (pygame.time.get_ticks() - advantageStartTicks) / 1000
 
-    if seconds >= 1: # updates the timer each second
+    if seconds >= 1:  # updates the timer each second
         advantageTimer -= 1
         seconds = 0
         advantageStartTicks = pygame.time.get_ticks()
-        moveLordVader( hero, not powerUp) #evades if powerUp
+        moveLordVader(hero, not powerUp)  # evades if powerUp
 
-    if advantageTimer <=0:  #advantage has shifted
+    if advantageTimer <= 0:  # advantage has shifted
         if advantageLight:  # now it's Darkside Advantage
             advantageLight = False
             advantageTimer = 5
@@ -309,9 +325,9 @@ while game_on:     #main loop
             elif (event.key == keys['esc']):
                 # Move the hero to a random position a la hyperspace in Asteroids...consider separate function and negative consequence
                 randomlyPlaceChar(hero)
-            moveLordVader(hero, vaderPursues) #pursue/evade our hero
+            moveLordVader(hero, vaderPursues)  # pursue/evade our hero
         elif (event.type == pygame.KEYUP):
-            #print "User released a key"
+            # print "User released a key"
             if (event.key == keys['up'] or event.key == keys['i']):
                 keys_down['up'] = False
             elif (event.key == keys['down'] or event.key == keys['k']):
@@ -320,7 +336,7 @@ while game_on:     #main loop
                 keys_down['right'] = False
             elif (event.key == keys['left'] or event.key == keys['j']):
                 keys_down['left'] = False
-            moveLordVader(hero, vaderPursues) #pursue/evade our hero
+            moveLordVader(hero, vaderPursues)  # pursue/evade our hero
 
     if keys_down['up']:
         hero_image = hero_image_left
@@ -343,14 +359,14 @@ while game_on:     #main loop
     if (detectCollision(hero, lightsaber)):
         powerUp = True
 
-        #wipe out the lightsaber and make sound
+        # wipe out the lightsaber and make sound
         removeObjectFromBackground(lightsaber)
         mixChannel2.play(saberOnSound)
 
         # Make Vader run away!
         vaderPursues = False
 
-        #get the baseline for the timer
+        # get the baseline for the timer
         powerStartTicks = pygame.time.get_ticks()
 
     if (detectCollision(lordVader, hero)):
@@ -366,54 +382,57 @@ while game_on:     #main loop
             else:
                 print "Dark forces are at play!"
 
-    if powerUp:  #we know hero has lightsaber
-        hero_image = lightsaberNormal #override the hero image
+    if powerUp:  # we know hero has lightsaber
+        hero_image = lightsaberNormal  # override the hero image
 
-        powerSeconds = (pygame.time.get_ticks()-powerStartTicks)/1000
+        powerSeconds = (pygame.time.get_ticks() - powerStartTicks) / 1000
 
-        if powerSeconds >= 1: # updates the timer each second
+        if powerSeconds >= 1:  # updates the timer each second
             powerTimer -= 1
             powerSeconds = 0
             powerStartTicks = pygame.time.get_ticks()
 
-        if powerTimer <=0:    #time expired, set flag and reset timer
+        if powerTimer <= 0:  # time expired, set flag and reset timer
             powerUp = False
             powerTimer = 5
             hero_image = hero_image_left
             print "reset hero_image after powerUp expired"
             mixChannel2.play(r2d2WarnSound)
-            if advantageLight: #another chance to grab the lightsaber
+            if advantageLight:  # another chance to grab the lightsaber
                 randomlyPlaceChar(lightsaber)
                 mixChannel3.play(saberAppearsSound)
 
     if advantageLight:
-        advantage_text = font.render("Lightside Rules: %d" % advantageTimer, True, (255,255,255))
+        advantage_text = font.render(
+            "Lightside Rules: %d" % advantageTimer, True, (255, 255, 255))
 
-        if not powerUp: #make lightsaber blink
+        if not powerUp:  # make lightsaber blink
             if lightsaber_image == lightsaberInvert:
                 lightsaber_image = lightsaberNormal
             else:
                 lightsaber_image = lightsaberInvert
-            pygame_screen.blit(lightsaber_image, [lightsaber['x'], lightsaber['y']])
+            pygame_screen.blit(lightsaber_image, [
+                               lightsaber['x'], lightsaber['y']])
 
-    else: # advantage Darkside!  No lightsaber to save our hero!
-        advantage_text = font.render("DARKSIDE RULES! %d" % advantageTimer, True, (255,255,255))
+    else:  # advantage Darkside!  No lightsaber to save our hero!
+        advantage_text = font.render(
+            "DARKSIDE RULES! %d" % advantageTimer, True, (255, 255, 255))
 
-        #if the hero was powerUp the Darkside takes it away!
-        powerTimer = 5 #reset timer
+        # if the hero was powerUp the Darkside takes it away!
+        powerTimer = 5  # reset timer
         powerUp = False
 
-        if hero_image == lightsaberNormal:  #kluge to squash hero_image bug
+        if hero_image == lightsaberNormal:  # kluge to squash hero_image bug
             hero_image = hero_image_left
 
-        #wipe out the lightsaber
+        # wipe out the lightsaber
         removeObjectFromBackground(lightsaber)
 
     # Fill in the screen with a color or image...use blit
 
-    wins_text = font.render("Wins: %d" % (hero['wins']), True, (255,255,255))
-    pygame_screen.blit(wins_text, [40,40])
-    pygame_screen.blit(advantage_text, [300,40])
+    wins_text = font.render("Wins: %d" % (hero['wins']), True, (255, 255, 255))
+    pygame_screen.blit(wins_text, [40, 40])
+    pygame_screen.blit(advantage_text, [300, 40])
     pygame_screen.blit(lordVader_image, [lordVader['x'], lordVader['y']])
 
     # Always want the hero on top so blit him last!

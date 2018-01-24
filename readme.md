@@ -2,7 +2,7 @@
 
 
 ## Overview:
-This is an entertaining game of tag between Yoda and Darth Vader.  It is written in Python and uses pygame.
+This is an entertaining game of tag between Yoda and Darth Vader.  It is written in Python and uses pygame.  You play as Yoda.
 
 
 **Features:**
